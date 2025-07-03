@@ -1,4 +1,4 @@
-# 🔥 TweetRoaster
+# 🔥 TweetRoaster - AI Powered
 
 **Turn tweets into toasty burns.**  
 Paste any tweet. Choose your mood. Select roast level. Get 3 spicy, AI-generated comebacks — from mild sarcasm to nuclear savagery.  
