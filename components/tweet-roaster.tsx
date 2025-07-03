@@ -2,34 +2,18 @@
 
 import { useState } from "react"
 import { Copy, Flame, Sparkles, Zap } from "lucide-react"
-import { generateRoasts } from "@/lib/roast-generator"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-
-type RoastLevel = "easy" | "medium" | "hard"
-type Mood = "angry" | "happy" | "humorous" | "sarcastic"
+import { Mood, MOODS, ROAST_LEVELS, RoastLevel } from "@/lib/constants"
 
 interface RoastResult {
   text: string
   level: RoastLevel
   mood: Mood
 }
-
-const roastLevels = [
-  { id: "easy" as RoastLevel, emoji: "🌶️", label: "Easy Roast", description: "Gentle teasing with a smile" },
-  { id: "medium" as RoastLevel, emoji: "🔥", label: "Medium Roast", description: "Solid burns with attitude" },
-  { id: "hard" as RoastLevel, emoji: "💀", label: "Hard Roast", description: "Brutal and unfiltered destruction" },
-]
-
-const moods = [
-  { id: "angry" as Mood, emoji: "😡", label: "Angry", description: "Furious and aggressive tone" },
-  { id: "happy" as Mood, emoji: "😄", label: "Happy", description: "Cheerful but cutting remarks" },
-  { id: "humorous" as Mood, emoji: "😂", label: "Humorous", description: "Funny and witty comebacks" },
-  { id: "sarcastic" as Mood, emoji: "🧐", label: "Sarcastic", description: "Dry wit and clever mockery" },
-]
 
 const loadingMessages = [
   "Brace yourself! 🔥",
@@ -42,23 +26,49 @@ const loadingMessages = [
 export default function TweetRoaster() {
   const [tweetText, setTweetText] = useState("")
   const [twitterHandle, setTwitterHandle] = useState("")
-  const [selectedLevel, setSelectedLevel] = useState<RoastLevel>("medium")
-  const [selectedMood, setSelectedMood] = useState<Mood>("humorous")
+  const [selectedLevel, setSelectedLevel] = useState<RoastLevel>(ROAST_LEVELS[1].id)
+  const [selectedMood, setSelectedMood] = useState<Mood>(MOODS[2].id)
   const [roasts, setRoasts] = useState<RoastResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState("")
+  const [error, setError] = useState<string | null>(null)
 
   const handleRoast = async () => {
     if (!tweetText.trim()) return
-
     setIsLoading(true)
+    setError(null)
     setLoadingMessage(loadingMessages[Math.floor(Math.random() * loadingMessages.length)])
-
-    // Simulate API delay for better UX
-    await new Promise((resolve) => setTimeout(resolve, 1500))
-
-    const generatedRoasts = generateRoasts(tweetText, twitterHandle, selectedLevel, selectedMood)
-    setRoasts(generatedRoasts)
+    try {
+      const res = await fetch("/app/actions/generate-roasts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tweet: tweetText,
+          mood: selectedMood,
+          roastLevel: selectedLevel,
+          twitterHandle: twitterHandle.replace(/^@/, "") || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (data.error) {
+        setError(data.error)
+        setRoasts([])
+      } else if (Array.isArray(data.roasts)) {
+        setRoasts(
+          data.roasts.map((text: string, i: number) => ({
+            text,
+            level: ROAST_LEVELS[i]?.id || selectedLevel,
+            mood: selectedMood,
+          }))
+        )
+      } else {
+        setError("Could not generate roasts. Please try again.")
+        setRoasts([])
+      }
+    } catch {
+      setError("Something went wrong. Please try again later.")
+      setRoasts([])
+    }
     setIsLoading(false)
   }
 
@@ -129,11 +139,11 @@ export default function TweetRoaster() {
             <div>
               <Label className="text-lg font-semibold text-gray-700 mb-3 block">Choose your roast level 🌡️</Label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {roastLevels.map((level) => (
+                {ROAST_LEVELS.map((level) => (
                   <Tooltip key={level.id}>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={() => setSelectedLevel(level.id)}
+                        onClick={() => setSelectedLevel(level.id as RoastLevel)}
                         className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${
                           selectedLevel === level.id
                             ? "border-orange-500 bg-orange-50 shadow-md"
@@ -156,11 +166,11 @@ export default function TweetRoaster() {
             <div>
               <Label className="text-lg font-semibold text-gray-700 mb-3 block">Pick your mood 🎭</Label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {moods.map((mood) => (
+                {MOODS.map((mood) => (
                   <Tooltip key={mood.id}>
                     <TooltipTrigger asChild>
                       <button
-                        onClick={() => setSelectedMood(mood.id)}
+                        onClick={() => setSelectedMood(mood.id as Mood)}
                         className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${
                           selectedMood === mood.id
                             ? "border-orange-500 bg-orange-50 shadow-md"
@@ -237,11 +247,11 @@ export default function TweetRoaster() {
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-lg">{roastLevels.find((l) => l.id === roast.level)?.emoji}</span>
-                        <span className="text-lg">{moods.find((m) => m.id === roast.mood)?.emoji}</span>
+                        <span className="text-lg">{ROAST_LEVELS.find((l) => l.id === roast.level)?.emoji}</span>
+                        <span className="text-lg">{MOODS.find((m) => m.id === roast.mood)?.emoji}</span>
                         <span className="text-sm font-medium text-gray-600">
-                          {roastLevels.find((l) => l.id === roast.level)?.label} •{" "}
-                          {moods.find((m) => m.id === roast.mood)?.label}
+                          {ROAST_LEVELS.find((l) => l.id === roast.level)?.label} •{" "}
+                          {MOODS.find((m) => m.id === roast.mood)?.label}
                         </span>
                       </div>
                       <p className="text-gray-800 text-lg leading-relaxed">{roast.text}</p>
@@ -257,6 +267,15 @@ export default function TweetRoaster() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="text-center mb-8">
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative inline-block" role="alert">
+              <span className="block sm:inline">{error}</span>
             </div>
           </div>
         )}
