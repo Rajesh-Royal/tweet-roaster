@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     siteName: "TweetRoaster",
     images: [
       {
-        url: "/og-image.png",
+        url: "https://tweetroaster.vercel.app/og-image.png",
         width: 1200,
         height: 630,
         alt: "TweetRoaster - Turn Tweets into Toasted Crumbs",
