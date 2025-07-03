@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Mood, MOODS, ROAST_LEVELS, RoastLevel } from "@/lib/constants"
+import { generateRoasts } from "@/app/actions/generate-roasts"
 
 interface RoastResult {
   text: string
@@ -33,40 +34,28 @@ export default function TweetRoaster() {
   const [loadingMessage, setLoadingMessage] = useState("")
   const [error, setError] = useState<string | null>(null)
 
-  const handleRoast = async () => {
-    if (!tweetText.trim()) return
+  async function handleFormAction(formData: FormData) {
     setIsLoading(true)
     setError(null)
     setLoadingMessage(loadingMessages[Math.floor(Math.random() * loadingMessages.length)])
-    try {
-      const res = await fetch("/app/actions/generate-roasts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tweet: tweetText,
-          mood: selectedMood,
-          roastLevel: selectedLevel,
-          twitterHandle: twitterHandle.replace(/^@/, "") || undefined,
-        }),
-      })
-      const data = await res.json()
-      if (data.error) {
-        setError(data.error)
-        setRoasts([])
-      } else if (Array.isArray(data.roasts)) {
-        setRoasts(
-          data.roasts.map((text: string, i: number) => ({
-            text,
-            level: ROAST_LEVELS[i]?.id || selectedLevel,
-            mood: selectedMood,
-          }))
-        )
-      } else {
-        setError("Could not generate roasts. Please try again.")
-        setRoasts([])
-      }
-    } catch {
-      setError("Something went wrong. Please try again later.")
+    const tweet = formData.get("tweet")?.toString() || ""
+    const mood = formData.get("mood")?.toString() as Mood
+    const roastLevel = formData.get("roastLevel")?.toString() as RoastLevel
+    const twitterHandle = formData.get("twitterHandle")?.toString() || undefined
+    const result = await generateRoasts({ tweet, mood, roastLevel, twitterHandle })
+    if (result.error) {
+      setError(result.error)
+      setRoasts([])
+    } else if (Array.isArray(result.roasts)) {
+      setRoasts(
+        result.roasts.map((text: string, i: number) => ({
+          text,
+          level: ROAST_LEVELS[i]?.id || roastLevel,
+          mood: mood,
+        }))
+      )
+    } else {
+      setError("Could not generate roasts. Please try again.")
       setRoasts([])
     }
     setIsLoading(false)
@@ -103,114 +92,119 @@ export default function TweetRoaster() {
   return (
     <TooltipProvider>
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8">
-          <div className="space-y-6">
-            {/* Tweet Input */}
-            <div>
-              <Label htmlFor="tweet-text" className="text-lg font-semibold text-gray-700 mb-2 block">
-                Paste the tweet to roast 📝
-              </Label>
-              <Textarea
-                id="tweet-text"
-                placeholder="Paste the tweet text here... (e.g., 'Just had the best coffee ever! ☕️ #blessed')"
-                value={tweetText}
-                onChange={(e) => setTweetText(e.target.value)}
-                className="min-h-[120px] text-lg resize-none"
-                maxLength={280}
-              />
-              <p className="text-sm text-gray-500 mt-1">{tweetText.length}/280 characters</p>
-            </div>
+        <form action={handleFormAction} className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 space-y-6">
+          {/* Tweet Input */}
+          <div>
+            <Label htmlFor="tweet-text" className="text-lg font-semibold text-gray-700 mb-2 block">
+              Paste the tweet to roast 📝
+            </Label>
+            <Textarea
+              id="tweet-text"
+              name="tweet"
+              placeholder="Paste the tweet text here... (e.g., 'Just had the best coffee ever! ☕️ #blessed')"
+              value={tweetText}
+              onChange={(e) => setTweetText(e.target.value)}
+              className="min-h-[120px] text-lg resize-none"
+              maxLength={280}
+              required
+            />
+            <p className="text-sm text-gray-500 mt-1">{tweetText.length}/280 characters</p>
+          </div>
 
-            {/* Twitter Handle (Optional) */}
-            <div>
-              <Label htmlFor="twitter-handle" className="text-lg font-semibold text-gray-700 mb-2 block">
-                Twitter Handle <span className="text-sm font-normal text-gray-500">(optional)</span>
-              </Label>
-              <Input
-                id="twitter-handle"
-                placeholder="@username (for more personalized roasts)"
-                value={twitterHandle}
-                onChange={(e) => setTwitterHandle(e.target.value)}
-                className="text-lg"
-              />
-            </div>
+          {/* Twitter Handle (Optional) */}
+          <div>
+            <Label htmlFor="twitter-handle" className="text-lg font-semibold text-gray-700 mb-2 block">
+              Twitter Handle <span className="text-sm font-normal text-gray-500">(optional)</span>
+            </Label>
+            <Input
+              id="twitter-handle"
+              name="twitterHandle"
+              placeholder="@username (for more personalized roasts)"
+              value={twitterHandle}
+              onChange={(e) => setTwitterHandle(e.target.value)}
+              className="text-lg"
+            />
+          </div>
 
-            {/* Roast Level Selector */}
-            <div>
-              <Label className="text-lg font-semibold text-gray-700 mb-3 block">Choose your roast level 🌡️</Label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {ROAST_LEVELS.map((level) => (
-                  <Tooltip key={level.id}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => setSelectedLevel(level.id as RoastLevel)}
-                        className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${
-                          selectedLevel === level.id
-                            ? "border-orange-500 bg-orange-50 shadow-md"
-                            : "border-gray-200 bg-white hover:border-orange-300"
-                        }`}
-                      >
-                        <div className="text-2xl mb-1">{level.emoji}</div>
-                        <div className="font-medium text-gray-700">{level.label}</div>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{level.description}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            </div>
-
-            {/* Mood Selector */}
-            <div>
-              <Label className="text-lg font-semibold text-gray-700 mb-3 block">Pick your mood 🎭</Label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {MOODS.map((mood) => (
-                  <Tooltip key={mood.id}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => setSelectedMood(mood.id as Mood)}
-                        className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${
-                          selectedMood === mood.id
-                            ? "border-orange-500 bg-orange-50 shadow-md"
-                            : "border-gray-200 bg-white hover:border-orange-300"
-                        }`}
-                      >
-                        <div className="text-2xl mb-1">{mood.emoji}</div>
-                        <div className="font-medium text-gray-700 text-sm">{mood.label}</div>
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{mood.description}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            </div>
-
-            {/* Roast Button */}
-            <div className="text-center pt-4">
-              <Button
-                onClick={handleRoast}
-                disabled={!tweetText.trim() || isLoading}
-                className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-              >
-                {isLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Flame className="animate-pulse" size={20} />
-                    Roasting...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Zap size={20} />
-                    Roast it!
-                  </div>
-                )}
-              </Button>
+          {/* Roast Level Selector */}
+          <div>
+            <Label className="text-lg font-semibold text-gray-700 mb-3 block">Choose your roast level 🌡️</Label>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {ROAST_LEVELS.map((level) => (
+                <Tooltip key={level.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLevel(level.id as RoastLevel)}
+                      className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${
+                        selectedLevel === level.id
+                          ? "border-orange-500 bg-orange-50 shadow-md"
+                          : "border-gray-200 bg-white hover:border-orange-300"
+                      }`}
+                    >
+                      <div className="text-2xl mb-1">{level.emoji}</div>
+                      <div className="font-medium text-gray-700">{level.label}</div>
+                      <input type="radio" name="roastLevel" value={level.id} checked={selectedLevel === level.id} readOnly hidden />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{level.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
             </div>
           </div>
-        </div>
+
+          {/* Mood Selector */}
+          <div>
+            <Label className="text-lg font-semibold text-gray-700 mb-3 block">Pick your mood 🎭</Label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {MOODS.map((mood) => (
+                <Tooltip key={mood.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedMood(mood.id as Mood)}
+                      className={`p-4 rounded-lg border-2 transition-all hover:scale-105 ${
+                        selectedMood === mood.id
+                          ? "border-orange-500 bg-orange-50 shadow-md"
+                          : "border-gray-200 bg-white hover:border-orange-300"
+                      }`}
+                    >
+                      <div className="text-2xl mb-1">{mood.emoji}</div>
+                      <div className="font-medium text-gray-700 text-sm">{mood.label}</div>
+                      <input type="radio" name="mood" value={mood.id} checked={selectedMood === mood.id} readOnly hidden />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{mood.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </div>
+
+          {/* Roast Button */}
+          <div className="text-center pt-4">
+            <Button
+              type="submit"
+              disabled={!tweetText.trim() || isLoading}
+              className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <Flame className="animate-pulse" size={20} />
+                  Roasting...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Zap size={20} />
+                  Roast it!
+                </div>
+              )}
+            </Button>
+          </div>
+        </form>
 
         {/* Loading Message */}
         {isLoading && (

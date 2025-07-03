@@ -1,8 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import { Ratelimit } from "@upstash/ratelimit";
-import { Redis } from "@upstash/redis";
 import { OpenAI } from "openai";
 import { headers } from "next/headers";
 import { MOODS, ROAST_LEVELS } from "@/lib/constants";
@@ -27,12 +25,6 @@ const roastSchema = z.object({
     .optional(),
 });
 
-const redis = Redis.fromEnv();
-const ratelimit = new Ratelimit({
-  redis,
-  limiter: Ratelimit.slidingWindow(3, "1 m"),
-});
-
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 function escapeHTML(str: string) {
@@ -49,11 +41,6 @@ function escapeHTML(str: string) {
 export async function generateRoasts(formData: unknown) {
   try {
     const { tweet, mood, roastLevel, twitterHandle } = roastSchema.parse(formData);
-    const ip = (await headers()).get("x-forwarded-for") || "unknown";
-    const { success } = await ratelimit.limit(ip);
-    if (!success) {
-      return { error: "Whoa, slow down! Too many roasts at once." };
-    }
     // Sanitize inputs
     const safeTweet = escapeHTML(tweet.trim());
     const safeHandle = twitterHandle ? escapeHTML(twitterHandle.trim()) : undefined;
@@ -84,6 +71,7 @@ export async function generateRoasts(formData: unknown) {
     }
     return { roasts };
   } catch (err: any) {
+    console.log(err)
     if (err instanceof z.ZodError) {
       return { error: err.errors[0]?.message || "Invalid input." };
     }
