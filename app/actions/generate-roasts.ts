@@ -71,9 +71,12 @@ export async function generateRoasts(formData: unknown) {
     }
     return { roasts };
   } catch (err: any) {
-    console.log(err)
     if (err instanceof z.ZodError) {
       return { error: err.errors[0]?.message || "Invalid input." };
+    }
+    // Handle OpenAI quota exceeded error
+    if (err?.code === "insufficient_quota" || err?.status === 429) {
+      return { error: "OpenAI quota exceeded 😢. Please try again later or check your API plan." };
     }
     // Do not leak stack traces or OpenAI errors
     return { error: "Something went wrong. Please try again later." };

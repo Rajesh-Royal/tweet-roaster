@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useTransition } from "react"
 import { Copy, Flame, Sparkles, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -31,35 +31,43 @@ export default function TweetRoaster() {
   const [selectedMood, setSelectedMood] = useState<Mood>(MOODS[2].id)
   const [roasts, setRoasts] = useState<RoastResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [loadingMessage, setLoadingMessage] = useState("")
+  const [loadingMessage, setLoadingMessage] = useState(loadingMessages[Math.floor(Math.random() * loadingMessages.length)])
   const [error, setError] = useState<string | null>(null)
+  const [isPending, startTransition] = useTransition();
+console.log(loadingMessage)
 
-  async function handleFormAction(formData: FormData) {
-    setIsLoading(true)
-    setError(null)
-    setLoadingMessage(loadingMessages[Math.floor(Math.random() * loadingMessages.length)])
-    const tweet = formData.get("tweet")?.toString() || ""
-    const mood = formData.get("mood")?.toString() as Mood
-    const roastLevel = formData.get("roastLevel")?.toString() as RoastLevel
-    const twitterHandle = formData.get("twitterHandle")?.toString() || undefined
-    const result = await generateRoasts({ tweet, mood, roastLevel, twitterHandle })
-    if (result.error) {
-      setError(result.error)
-      setRoasts([])
-    } else if (Array.isArray(result.roasts)) {
-      setRoasts(
-        result.roasts.map((text: string, i: number) => ({
-          text,
-          level: ROAST_LEVELS[i]?.id || roastLevel,
-          mood: mood,
-        }))
-      )
-    } else {
-      setError("Could not generate roasts. Please try again.")
-      setRoasts([])
-    }
-    setIsLoading(false)
-  }
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    const msg = loadingMessages[Math.floor(Math.random() * loadingMessages.length)];
+    setLoadingMessage(msg);
+    setIsLoading(true);
+
+    const formData = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const tweet = formData.get("tweet")?.toString() || "";
+      const mood = formData.get("mood")?.toString() as Mood;
+      const roastLevel = formData.get("roastLevel")?.toString() as RoastLevel;
+      const twitterHandle = formData.get("twitterHandle")?.toString() || undefined;
+      const result = await generateRoasts({ tweet, mood, roastLevel, twitterHandle });
+      if (result.error) {
+        setError(result.error);
+        setRoasts([]);
+      } else if (Array.isArray(result.roasts)) {
+        setRoasts(
+          result.roasts.map((text: string, i: number) => ({
+            text,
+            level: ROAST_LEVELS[i]?.id || roastLevel,
+            mood: mood,
+          }))
+        );
+      } else {
+        setError("Could not generate roasts. Please try again.");
+        setRoasts([]);
+      }
+      setIsLoading(false);
+    });
+  };
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -92,7 +100,10 @@ export default function TweetRoaster() {
   return (
     <TooltipProvider>
       <div className="max-w-4xl mx-auto">
-        <form action={handleFormAction} className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 space-y-6"
+        >
           {/* Tweet Input */}
           <div>
             <Label htmlFor="tweet-text" className="text-lg font-semibold text-gray-700 mb-2 block">
@@ -188,10 +199,10 @@ export default function TweetRoaster() {
           <div className="text-center pt-4">
             <Button
               type="submit"
-              disabled={!tweetText.trim() || isLoading}
+              disabled={!tweetText.trim() || isLoading || isPending}
               className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-bold py-4 px-8 rounded-xl text-lg shadow-lg hover:shadow-xl transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {isLoading ? (
+              {(isLoading || isPending) ? (
                 <div className="flex items-center gap-2">
                   <Flame className="animate-pulse" size={20} />
                   Roasting...
@@ -207,7 +218,7 @@ export default function TweetRoaster() {
         </form>
 
         {/* Loading Message */}
-        {isLoading && (
+        {(isLoading || isPending) && (
           <div className="text-center mb-8">
             <div className="bg-white rounded-lg shadow-md p-6 inline-block">
               <div className="flex items-center gap-3">
