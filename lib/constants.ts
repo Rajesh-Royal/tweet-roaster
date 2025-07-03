@@ -18,5 +18,10 @@ export const openAPIErrors = {
   funny: { error: "You've roasted too hard and broke the AI 🔥💀. OpenAI says 'no more jokes for now.' Check your plan or give it a break." },
   funnyUserApi: { error: "Your OpenAI key ran out of roast fuel ⛽. Either top it up or let the poor model rest." },
   playful: { error: "Your API key needs a nap 😴. Looks like OpenAI put it in timeout. Try again later!" },
-
+  userApiByMood: {
+    angry: { error: "Your API key is as angry as you are! 😡 It's out of quota. Try topping it up or take a breather." },
+    happy: { error: "Even happy keys need a break! 😄 Your API key is out of quota. Recharge and try again soon." },
+    humorous: { error: "Your API key ran out of jokes! 😂 Out of quota. Maybe it's time for a coffee break?" },
+    sarcastic: { error: "Your API key is being sarcastic: 'Oh, you thought you had unlimited quota?' 🧐 Try again later." },
+  }
 }

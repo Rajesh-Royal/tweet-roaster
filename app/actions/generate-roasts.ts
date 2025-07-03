@@ -23,6 +23,7 @@ const roastSchema = z.object({
     .max(30)
     .regex(/^([a-zA-Z0-9_]+)?$/, "Invalid Twitter handle.")
     .optional(),
+  userApiKey: z.string().optional(),
 });
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -38,15 +39,19 @@ function escapeHTML(str: string) {
   }[c] as string));
 }
 
-export async function generateRoasts(formData: unknown) {
+export async function generateRoasts(formData: any) {
+  const { tweet, mood, roastLevel, twitterHandle, userApiKey } = formData;
   try {
-    const { tweet, mood, roastLevel, twitterHandle } = roastSchema.parse(formData);
     // Sanitize inputs
     const safeTweet = escapeHTML(tweet.trim());
     const safeHandle = twitterHandle ? escapeHTML(twitterHandle.trim()) : undefined;
+    // Use user-supplied API key if present, otherwise use default
+    const openaiClient = userApiKey
+      ? new OpenAI({ apiKey: userApiKey })
+      : openai;
     const systemPrompt = `You are a witty AI roast generator. Given a tweet, a mood, and a roast level (easy, medium, hard), generate 3 roast responses in a conversational, ChatGPT-like tone. Each roast should be labeled with an emoji and level (Mild, Medium, Hard). Format: [\n"🌶️ Mild: ...", "🔥 Medium: ...", "💀 Hard: ..."]\nRoast Level: ${roastLevel}`;
     const userPrompt = `Tweet: "${safeTweet}"\nMood: ${mood}${safeHandle ? `\nTwitter Handle: @${safeHandle}` : ""}`;
-    const completion = await openai.chat.completions.create({
+    const completion = await openaiClient.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: systemPrompt },
@@ -76,6 +81,10 @@ export async function generateRoasts(formData: unknown) {
     }
     // Handle OpenAI quota exceeded error
     if (err?.code === "insufficient_quota" || err?.status === 429) {
+      // If userApiKey is present, return mood-based error
+      if (userApiKey && mood && openAPIErrors.userApiByMood[mood as keyof typeof openAPIErrors.userApiByMood]) {
+        return openAPIErrors.userApiByMood[mood as keyof typeof openAPIErrors.userApiByMood];
+      }
       // Todo: return other variants based on the mood and if user has given own api key
       return openAPIErrors.original;
     }

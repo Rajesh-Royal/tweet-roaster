@@ -33,6 +33,8 @@ export default function TweetRoaster() {
   const [isLoading, setIsLoading] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState(loadingMessages[Math.floor(Math.random() * loadingMessages.length)])
   const [error, setError] = useState<string | null>(null)
+  const [userApiKey, setUserApiKey] = useState<string>("")
+  const [showApiKeyInput, setShowApiKeyInput] = useState(false)
   const [isPending, startTransition] = useTransition();
 console.log(loadingMessage)
 
@@ -49,10 +51,13 @@ console.log(loadingMessage)
       const mood = formData.get("mood")?.toString() as Mood;
       const roastLevel = formData.get("roastLevel")?.toString() as RoastLevel;
       const twitterHandle = formData.get("twitterHandle")?.toString() || undefined;
-      const result = await generateRoasts({ tweet, mood, roastLevel, twitterHandle });
+      const result = await generateRoasts({ tweet, mood, roastLevel, twitterHandle, userApiKey: userApiKey || undefined });
       if (result.error) {
         setError(result.error);
         setRoasts([]);
+        if (result.error.includes("OpenAI quota exceeded")) {
+          setShowApiKeyInput(true);
+        }
       } else if (Array.isArray(result.roasts)) {
         setRoasts(
           result.roasts.map((text: string, i: number) => ({
@@ -61,6 +66,7 @@ console.log(loadingMessage)
             mood: mood,
           }))
         );
+        setShowApiKeyInput(false);
       } else {
         setError("Could not generate roasts. Please try again.");
         setRoasts([]);
@@ -100,6 +106,32 @@ console.log(loadingMessage)
   return (
     <TooltipProvider>
       <div className="max-w-4xl mx-auto">
+        {showApiKeyInput && (
+          <div className="mb-6 p-4 border border-yellow-400 bg-yellow-50 rounded-lg">
+            <div className="mb-2 font-semibold text-yellow-800">OpenAI quota exceeded</div>
+            <div className="mb-2 text-yellow-800 text-sm">
+              You can use your own OpenAI API key to continue generating roasts.<br />
+              <span className="font-medium">Privacy note:</span> Your API key is only used in this session and never sent to our server or stored anywhere.<br />
+              <a
+                href="https://platform.openai.com/api-keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline text-blue-700"
+              >
+                How to generate an OpenAI API key
+              </a>
+            </div>
+            <input
+              type="password"
+              className="border rounded px-3 py-2 w-full mt-2"
+              placeholder="Paste your OpenAI API key here (sk-...)"
+              value={userApiKey}
+              onChange={e => setUserApiKey(e.target.value)}
+              autoComplete="off"
+            />
+            <div className="text-xs text-gray-500 mt-1">Your key will be used only in this browser session.</div>
+          </div>
+        )}
         <form
           onSubmit={handleSubmit}
           className="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 space-y-6"
