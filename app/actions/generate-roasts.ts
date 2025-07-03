@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { OpenAI } from "openai";
 import { headers } from "next/headers";
-import { MOODS, ROAST_LEVELS } from "@/lib/constants";
+import { MOODS, openAPIErrors, ROAST_LEVELS } from "@/lib/constants";
 
 const roastSchema = z.object({
   tweet: z
@@ -76,7 +76,8 @@ export async function generateRoasts(formData: unknown) {
     }
     // Handle OpenAI quota exceeded error
     if (err?.code === "insufficient_quota" || err?.status === 429) {
-      return { error: "OpenAI quota exceeded 😢. Please try again later or check your API plan." };
+      // Todo: return other variants based on the mood and if user has given own api key
+      return openAPIErrors.original;
     }
     // Do not leak stack traces or OpenAI errors
     return { error: "Something went wrong. Please try again later." };

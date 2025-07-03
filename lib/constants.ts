@@ -12,3 +12,11 @@ export const MOODS = [
   { id: "sarcastic", emoji: "🧐", label: "Sarcastic", description: "Dry wit and clever mockery" },
 ] as const;
 export type Mood = typeof MOODS[number]["id"];
+
+export const openAPIErrors = {
+  original: { error: "OpenAI quota exceeded 😢. Please try again later or check your API plan." },
+  funny: { error: "You've roasted too hard and broke the AI 🔥💀. OpenAI says 'no more jokes for now.' Check your plan or give it a break." },
+  funnyUserApi: { error: "Your OpenAI key ran out of roast fuel ⛽. Either top it up or let the poor model rest." },
+  playful: { error: "Your API key needs a nap 😴. Looks like OpenAI put it in timeout. Try again later!" },
+
+}
