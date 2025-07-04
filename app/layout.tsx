@@ -1,12 +1,13 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import Link from "next/link"
-import { Github } from "lucide-react"
-import { Analytics } from "@vercel/analytics/next"
+import type React from "react";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import Link from "next/link";
+import { Github } from "lucide-react";
+import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "@/components/ui/toaster";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "TweetRoaster 🔥 - Turn Tweets into Toasted Crumbs",
@@ -35,7 +36,8 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "TweetRoaster 🔥 - Turn Tweets into Toasted Crumbs",
-    description: "The ultimate tweet roasting machine! Generate hilarious roast responses for any tweet.",
+    description:
+      "The ultimate tweet roasting machine! Generate hilarious roast responses for any tweet.",
     url: "https://tweetroaster.vercel.app",
     siteName: "TweetRoaster",
     images: [
@@ -52,7 +54,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "TweetRoaster 🔥 - Turn Tweets into Toasted Crumbs",
-    description: "The ultimate tweet roasting machine! Generate hilarious roast responses for any tweet.",
+    description:
+      "The ultimate tweet roasting machine! Generate hilarious roast responses for any tweet.",
     images: ["/og-image.png"],
     creator: "@tweetroaster",
   },
@@ -67,13 +70,13 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-    generator: 'v0.dev'
-}
+  generator: "v0.dev",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
@@ -110,13 +113,18 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.className} min-h-screen bg-gradient-to-br from-orange-50 to-red-50`}>
+      <body
+        className={`${inter.className} min-h-screen bg-gradient-to-br from-orange-50 to-red-50`}
+      >
         <div className="min-h-screen flex flex-col">
           <main className="flex-1">{children}</main>
           <footer className="bg-white border-t border-orange-200 py-6 mt-12">
             <div className="container mx-auto px-4 text-center">
               <p className="text-gray-600 mb-2">
-                Made with 🔥 by <span className="font-semibold text-orange-600">TweetRoaster Team</span>
+                Made with 🔥 by{" "}
+                <span className="font-semibold text-orange-600">
+                  TweetRoaster Team
+                </span>
               </p>
               <Link
                 href="https://github.com/Rajesh-Royal/tweet-roaster"
@@ -131,7 +139,8 @@ export default function RootLayout({
           </footer>
         </div>
         <Analytics />
+        <Toaster />
       </body>
     </html>
-  )
+  );
 }
